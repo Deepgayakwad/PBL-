@@ -5,14 +5,11 @@
   "main": "src/server/index.ts",
   "scripts": {
     "start": "ts-node src/server/index.ts",
-    "dev:server": "nodemon src/server/index.ts",
-    "dev:client": "cd src/client && npm start",
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "build:server": "tsc",
-    "build:client": "cd src/client && npm run build",
-    "build": "npm run build:server && npm run build:client",
-    "test": "cd src/client && npm test",
-    "init-db": "node scripts/init-db.js"
+    "server": "nodemon --exec ts-node src/server/index.ts",
+    "client": "cd src/client && npm start",
+    "db:init": "ts-node src/server/scripts/initDb.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

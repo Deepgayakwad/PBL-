@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
-import authMiddleware from '../middleware/auth';
+import pool from '../config/db';
+import { verifyToken, AuthRequest } from '../middleware/auth';
 import UserModel from '../models/User';
 
 const router = express.Router();
@@ -7,11 +8,35 @@ const router = express.Router();
 // In-memory fallback data for when database is unavailable
 const inMemoryUsers: { [id: number]: { id: number; email: string; created_at: string } } = {};
 
-// Get current user profile (protected route)
-router.get('/me', authMiddleware, async (req: Request, res: Response) => {
+// Get user profile
+router.get('/profile', verifyToken, async (req: AuthRequest, res: Response) => {
   try {
-    // req.user is set by the auth middleware
-    const userId = req.user?.userId;
+    const { userId } = req;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const [rows] = await pool.query(
+      'SELECT id, username, email, created_at FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (Array.isArray(rows) && rows.length > 0) {
+      return res.json(rows[0]);
+    } else {
+      return res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get current user profile (protected route)
+router.get('/me', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    // req.userId is set by the auth middleware
+    const { userId } = req;
     
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });

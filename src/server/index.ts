@@ -3,6 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './auth';
 import userRoutes from './routes/user';
+import donorRoutes from './routes/donor';
+import recipientRoutes from './routes/recipient';
+import hospitalRoutes from './routes/hospital';
 import { testConnection, initializeDatabase } from './config/db';
 
 dotenv.config();
@@ -17,6 +20,9 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/donor', donorRoutes);
+app.use('/api/recipient', recipientRoutes);
+app.use('/api/hospital', hospitalRoutes);
 
 // Health check route
 app.get('/health', (_req: Request, res: Response) => {

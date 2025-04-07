@@ -1,46 +1,31 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import path from 'path';
 
-// Load environment variables from the root directory
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config();
 
-// Log the environment variables for debugging
-console.log('DB Configuration:', {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD ? '(password hidden)' : 'No password',
-  database: process.env.DB_DATABASE || 'organ_finder',
-});
+async function initializeDatabase() {
+  const config = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '1920',
+  };
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '1920',
-  database: process.env.DB_DATABASE || 'organ_finder',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-// Test database connection
-export async function testConnection() {
   try {
-    const connection = await pool.getConnection();
-    console.log('Database connection established successfully.');
-    connection.release();
-    return true;
-  } catch (error) {
-    console.error('Failed to connect to database:', error);
-    throw error;
-  }
-}
-
-// Initialize database tables if needed
-export async function initializeDatabase() {
-  try {
-    // Create users table if it doesn't exist
-    await pool.query(`
+    // Create connection without database selected
+    const connection = await mysql.createConnection(config);
+    
+    console.log('Connected to MySQL server');
+    
+    // Create database if it doesn't exist
+    await connection.query(`CREATE DATABASE IF NOT EXISTS organ_finder`);
+    console.log('Database organ_finder created or already exists');
+    
+    // Use the database
+    await connection.query(`USE organ_finder`);
+    console.log('Using database organ_finder');
+    
+    // Create users table
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(50) NOT NULL UNIQUE,
@@ -50,9 +35,10 @@ export async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    console.log('Users table created or already exists');
     
-    // Create donors table if it doesn't exist
-    await pool.query(`
+    // Create donors table
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS donors (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
@@ -69,9 +55,10 @@ export async function initializeDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+    console.log('Donors table created or already exists');
     
-    // Create recipients table if it doesn't exist
-    await pool.query(`
+    // Create recipients table
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS recipients (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
@@ -91,9 +78,10 @@ export async function initializeDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+    console.log('Recipients table created or already exists');
     
-    // Create hospital_contacts table if it doesn't exist
-    await pool.query(`
+    // Create hospital_contacts table
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS hospital_contacts (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
@@ -105,13 +93,15 @@ export async function initializeDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+    console.log('Hospital contacts table created or already exists');
     
-    console.log('Database initialized successfully.');
-    return true;
+    console.log('Database initialization completed successfully');
+    await connection.end();
+    
   } catch (error) {
-    console.error('Failed to initialize database:', error);
-    throw error;
+    console.error('Error initializing database:', error);
+    process.exit(1);
   }
 }
 
-export default pool; 
+initializeDatabase(); 

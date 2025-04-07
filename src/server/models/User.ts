@@ -1,59 +1,64 @@
 import pool from '../config/db';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { RowDataPacket } from 'mysql2';
 
-export interface User {
-  id?: number;
+interface User extends RowDataPacket {
+  id: number;
+  username: string;
   email: string;
   password: string;
-  created_at?: Date;
-  updated_at?: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 class UserModel {
-  // Find user by email
-  async findByEmail(email: string): Promise<User | null> {
+  static async findById(id: number): Promise<User | null> {
     try {
-      const [rows] = await pool.query<RowDataPacket[]>(
+      const [rows] = await pool.query<User[]>(
+        'SELECT * FROM users WHERE id = ?',
+        [id]
+      );
+
+      if (rows.length > 0) {
+        return rows[0];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error finding user by ID:', error);
+      throw error;
+    }
+  }
+
+  static async findByEmail(email: string): Promise<User | null> {
+    try {
+      const [rows] = await pool.query<User[]>(
         'SELECT * FROM users WHERE email = ?',
         [email]
       );
-      
-      return rows.length > 0 ? rows[0] as User : null;
+
+      if (rows.length > 0) {
+        return rows[0];
+      }
+      return null;
     } catch (error) {
       console.error('Error finding user by email:', error);
       throw error;
     }
   }
 
-  // Create new user
-  async create(user: { email: string; password: string }): Promise<number> {
+  static async create(userData: { username: string; email: string; password: string }): Promise<number> {
     try {
-      const [result] = await pool.query<ResultSetHeader>(
-        'INSERT INTO users (email, password) VALUES (?, ?)',
-        [user.email, user.password]
+      const { username, email, password } = userData;
+      const [result] = await pool.query(
+        'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
+        [username, email, password]
       );
       
-      return result.insertId;
+      return (result as any).insertId;
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;
     }
   }
-
-  // Find user by ID
-  async findById(id: number): Promise<User | null> {
-    try {
-      const [rows] = await pool.query<RowDataPacket[]>(
-        'SELECT * FROM users WHERE id = ?',
-        [id]
-      );
-      
-      return rows.length > 0 ? rows[0] as User : null;
-    } catch (error) {
-      console.error('Error finding user by ID:', error);
-      throw error;
-    }
-  }
 }
 
-export default new UserModel(); 
+export default UserModel; 

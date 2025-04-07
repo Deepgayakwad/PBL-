@@ -1,36 +1,36 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Extend Express Request type to include user property
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { userId: number };
-    }
-  }
+// Extend the Request interface to add userId property
+export interface AuthRequest extends Request {
+  userId?: number;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Get token from header
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-
-  // Check if token exists
+export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+  
+  const token = authHeader.split(' ')[1]; // Format: "Bearer TOKEN"
+  
   if (!token) {
-    return res.status(401).json({ message: 'No token, authorization denied' });
+    return res.status(401).json({ message: 'No token provided' });
   }
-
+  
   try {
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
     
-    // Add user from payload to request object
-    req.user = decoded;
-    next();
+    if (typeof decoded === 'object' && decoded !== null) {
+      // Set userId in request object
+      req.userId = (decoded as any).id;
+      next();
+    } else {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
   } catch (error) {
-    res.status(401).json({ message: 'Token is not valid' });
+    console.error('Token verification error:', error);
+    return res.status(401).json({ message: 'Invalid token' });
   }
-};
-
-export default authMiddleware; 
+}; 
